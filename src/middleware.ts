@@ -1,4 +1,9 @@
-import { auth } from "@/auth";
+import NextAuth from "next-auth";
+import { authConfig } from "@/auth.config";
+
+// Edge-safe: NextAuth here is constructed with just the config
+// (no Credentials provider = no bcryptjs = works in Edge Runtime).
+const { auth } = NextAuth(authConfig);
 
 export default auth((req) => {
   const isLogin = req.nextUrl.pathname.startsWith("/login");
