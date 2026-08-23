@@ -13,6 +13,7 @@ import { StudentView } from "@/views/student";
 import { ParentView } from "@/views/parent";
 import { AiView } from "@/views/ai";
 import { AdminView } from "@/views/admin";
+import { TemplatesView } from "@/views/templates";
 
 export function ViewRouter() {
   const { view } = useView();
@@ -42,6 +43,8 @@ export function ViewRouter() {
       return <AiView />;
     case "admin":
       return <AdminView />;
+    case "templates":
+      return <TemplatesView />;
     default:
       return null;
   }

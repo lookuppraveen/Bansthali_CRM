@@ -50,6 +50,34 @@ export function useTemplates(channel?: string) {
   });
 }
 
+export function useCreateTemplate() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (v: { name: string; channel: string; subject?: string; body: string; language?: string; approved?: boolean }) =>
+      jsonFetch(`/api/templates`, { method: "POST", body: JSON.stringify(v) }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["templates"] }),
+  });
+}
+
+export function useUpdateTemplate() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (v: { id: number; name?: string; subject?: string | null; body?: string; language?: string; approved?: boolean }) => {
+      const { id, ...rest } = v;
+      return jsonFetch(`/api/templates/${id}`, { method: "PATCH", body: JSON.stringify(rest) });
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["templates"] }),
+  });
+}
+
+export function useDeleteTemplate() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (v: { id: number }) => jsonFetch(`/api/templates/${v.id}`, { method: "DELETE" }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["templates"] }),
+  });
+}
+
 export function useSendComm() {
   const qc = useQueryClient();
   return useMutation({
@@ -148,6 +176,32 @@ export function useImportLeads() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["leads"] });
       qc.invalidateQueries({ queryKey: ["dashboard"] });
+    },
+  });
+}
+
+export function useUpdateLead() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (v: {
+      id: number;
+      name?: string;
+      email?: string | null;
+      phone?: string | null;
+      city?: string | null;
+      program?: string | null;
+      faculty?: string | null;
+      category?: string | null;
+      aggregate?: string | null;
+      language?: string | null;
+      hostelRequested?: boolean;
+    }) => {
+      const { id, ...rest } = v;
+      return jsonFetch(`/api/leads/${id}`, { method: "PATCH", body: JSON.stringify(rest) });
+    },
+    onSuccess: (_d, v) => {
+      qc.invalidateQueries({ queryKey: ["lead", v.id] });
+      qc.invalidateQueries({ queryKey: ["leads"] });
     },
   });
 }

@@ -8,6 +8,7 @@ import { gradeColor, gradeOf, initials, stageTag } from "@/lib/format";
 import { useAdvanceStage, useHandoff, useLead, useLogEvent, useRefreshPayment, useToggleTask } from "@/lib/api";
 import { SendMessageDialog } from "@/components/send-message-dialog";
 import { CreatePaymentDialog } from "@/components/create-payment-dialog";
+import { EditLeadDialog } from "@/components/edit-lead-dialog";
 
 function timeAgo(iso: string) {
   const then = new Date(iso).getTime();
@@ -30,6 +31,7 @@ export function Lead360View() {
   const [note, setNote] = useState("");
   const [sendChannel, setSendChannel] = useState<"email" | "whatsapp" | "sms" | null>(null);
   const [showPayment, setShowPayment] = useState(false);
+  const [showEdit, setShowEdit] = useState(false);
 
   if (isLoading) return <div style={{ padding: 40 }}>Loading…</div>;
   if (error || !data?.lead)
@@ -88,6 +90,24 @@ export function Lead360View() {
           leadId={lead.id}
           leadName={lead.name}
           onClose={() => setShowPayment(false)}
+        />
+      )}
+      {showEdit && (
+        <EditLeadDialog
+          lead={{
+            id: lead.id,
+            name: lead.name,
+            email: lead.email,
+            phone: lead.phone,
+            city: lead.city,
+            program: lead.program,
+            faculty: lead.faculty,
+            category: lead.category,
+            aggregate: lead.aggregate,
+            language: lead.language,
+            hostelRequested: lead.hostelRequested,
+          }}
+          onClose={() => setShowEdit(false)}
         />
       )}
       <a
@@ -161,6 +181,14 @@ export function Lead360View() {
               Grade {grade}
             </div>
           </div>
+          <button
+            className="btn btn-icon btn-secondary"
+            title="Edit lead"
+            onClick={() => setShowEdit(true)}
+            style={{ alignSelf: "flex-start" }}
+          >
+            <Icon name="pencil" size={15} />
+          </button>
         </div>
         <div className="flex gap-2 mt-4 flex-wrap">
           <button className="btn btn-primary" style={{ gap: 6 }}>

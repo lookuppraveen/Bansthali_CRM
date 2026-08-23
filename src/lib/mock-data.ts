@@ -420,7 +420,13 @@ export const NAV_GROUPS = [
       { k: "ai", label: "AI Assistant", icon: "sparkles" },
     ],
   },
-  { label: "System", items: [{ k: "admin", label: "Admin & RBAC", icon: "shield" }] },
+  {
+    label: "System",
+    items: [
+      { k: "templates", label: "Templates", icon: "file-text" },
+      { k: "admin", label: "Admin & RBAC", icon: "shield" },
+    ],
+  },
 ] as const;
 
 export const CRUMBS: Record<string, [string, string]> = {
@@ -436,6 +442,7 @@ export const CRUMBS: Record<string, [string, string]> = {
   parent: ["Engagement", "Parent Portal"],
   ai: ["Engagement", "AI Assistant"],
   admin: ["System", "Admin & RBAC"],
+  templates: ["System", "Templates"],
 };
 
 export type ViewKey =
@@ -450,4 +457,5 @@ export type ViewKey =
   | "student"
   | "parent"
   | "ai"
-  | "admin";
+  | "admin"
+  | "templates";

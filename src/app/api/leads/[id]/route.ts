@@ -39,6 +39,16 @@ const patchSchema = z.object({
   score: z.number().int().min(0).max(100).optional(),
   ownerId: z.string().uuid().nullable().optional(),
   sla: z.enum(schema.slaEnum.enumValues).optional(),
+  name: z.string().min(1).max(160).optional(),
+  email: z.string().email().nullable().optional(),
+  phone: z.string().max(32).nullable().optional(),
+  city: z.string().max(120).nullable().optional(),
+  program: z.string().max(160).nullable().optional(),
+  faculty: z.string().max(160).nullable().optional(),
+  category: z.string().max(40).nullable().optional(),
+  aggregate: z.string().max(20).nullable().optional(),
+  language: z.string().max(60).nullable().optional(),
+  hostelRequested: z.boolean().optional(),
 });
 
 export async function PATCH(req: Request, { params }: { params: { id: string } }) {
