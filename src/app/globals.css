@@ -1,0 +1,188 @@
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600&family=Lora:wght@400;600&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* Classical light theme for the main content area — near-white warm ground,
+     ink text, gold accent. Pairs with a deep warm sidebar (styled in
+     sidebar.tsx) for the standard professional pattern. */
+  --color-bg: #f6f4ef;
+  --color-surface: #eae9e9;
+  --color-card: #ffffff;
+  --color-text: #000000;
+  --color-muted: rgba(0, 0, 0, 0.72);
+  --color-accent: #b68235;
+  --color-divider: rgba(0, 0, 0, 0.18);
+
+  --color-neutral-100: #f8f4f4;
+  --color-neutral-200: #eae7e7;
+  --color-neutral-300: #d7d3d3;
+  --color-neutral-400: #bab6b6;
+  --color-neutral-500: #9b9797;
+  --color-neutral-600: #7d7979;
+  --color-neutral-700: #605d5d;
+  --color-neutral-800: #444141;
+  --color-neutral-900: #2d2b2b;
+
+  --color-accent-100: #fff3e4;
+  --color-accent-200: #ffe3bf;
+  --color-accent-300: #facb8d;
+  --color-accent-400: #e1ad66;
+  --color-accent-500: #c28d41;
+  --color-accent-600: #a06f24;
+  --color-accent-700: #7d5411;
+  --color-accent-800: #5a3b0a;
+  --color-accent-900: #3a270d;
+
+  --font-heading: "Cormorant Garamond", Georgia, serif;
+  --font-body: "Lora", Georgia, serif;
+
+  --radius-sm: 2px;
+  --radius-md: 4px;
+  --radius-lg: 7px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-body);
+  font-size: 15px;
+  line-height: 1.55;
+  font-weight: 450;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-heading);
+  font-weight: 600;
+  line-height: 1.12;
+  letter-spacing: -0.015em;
+  margin: 0 0 9.2px;
+}
+h1 { font-size: 42px; }
+h2 { font-size: 32px; }
+h3 { font-size: 25px; }
+h4 { font-size: 20px; }
+h5 { font-size: 16px; }
+h6 { font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase; }
+p { margin: 0 0 13.8px; }
+
+a { color: var(--color-accent); text-decoration: none; text-underline-offset: 3px; }
+a:hover { text-decoration: underline; }
+
+:focus { outline: none; }
+:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+::selection { background: color-mix(in srgb, var(--color-accent) 30%, transparent); }
+
+.text-muted { color: var(--color-muted); }
+.tnum { font-feature-settings: 'tnum'; }
+
+/* Scrollbars */
+.app-scroll::-webkit-scrollbar { width: 10px; height: 10px; }
+.app-scroll::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--color-text) 18%, transparent);
+  border-radius: 6px;
+}
+.app-scroll::-webkit-scrollbar-track { background: transparent; }
+
+/* Animations */
+@keyframes fadeup {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: none; }
+}
+.view { animation: fadeup 0.28s ease both; }
+
+/* — component layer — */
+@layer components {
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    cursor: pointer; text-decoration: none;
+    font-family: var(--font-heading); font-weight: 600;
+    font-size: 14px; line-height: 1.2; color: var(--color-text);
+    background: transparent; border: 1px solid transparent;
+    padding: 9.2px 16.5px; border-radius: var(--radius-md);
+    transition: background 120ms ease, border-color 120ms ease;
+  }
+  .btn:disabled { opacity: 0.45; cursor: not-allowed; }
+  .btn-primary { color: var(--color-accent); border-color: var(--color-accent); }
+  .btn-primary:hover { background: color-mix(in srgb, var(--color-accent) 12%, transparent); }
+  .btn-primary:active { background: color-mix(in srgb, var(--color-accent) 22%, transparent); }
+  .btn-secondary { border-color: var(--color-divider); }
+  .btn-secondary:hover { background: color-mix(in srgb, var(--color-text) 7%, transparent); }
+  .btn-secondary:active { background: color-mix(in srgb, var(--color-text) 14%, transparent); }
+  .btn-ghost { color: var(--color-accent); padding-inline: 4.6px; border-color: transparent; }
+  .btn-ghost:hover { background: color-mix(in srgb, var(--color-accent) 10%, transparent); }
+  .btn-icon { width: 36px; height: 36px; padding: 0; }
+  .btn-block { width: 100%; }
+
+  .input {
+    width: 100%; min-height: 36px; padding: 6px 10px;
+    font: inherit; font-size: 14px;
+    color: var(--color-text); caret-color: var(--color-accent);
+    background: transparent;
+    border: 1px solid var(--color-divider); border-radius: var(--radius-md);
+  }
+  .input:hover { border-color: color-mix(in srgb, var(--color-text) 45%, transparent); }
+  .input:focus-visible { border-color: var(--color-accent); outline-offset: 0; }
+
+  .card {
+    display: flex; flex-direction: column; gap: 9.2px;
+    padding: 13.8px; border-radius: var(--radius-md);
+    background: var(--color-card); border: 1px solid var(--color-divider);
+  }
+  .card-kicker {
+    font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase;
+    color: var(--color-accent);
+  }
+  .card-title {
+    font-family: var(--font-heading); font-weight: 600;
+    font-size: 17px; line-height: 1.2;
+  }
+
+  .tag {
+    display: inline-flex; align-items: center; font-size: 11px;
+    letter-spacing: 0.02em; padding: 3px 10px;
+    border-radius: 3px;
+  }
+  .tag-accent   { background: var(--color-accent-100); color: var(--color-accent-800); }
+  .tag-accent-2 { background: var(--color-accent-100); color: var(--color-accent-800); }
+  .tag-neutral  { background: var(--color-neutral-100); color: var(--color-neutral-800); }
+  .tag-outline  { border: 1px solid var(--color-accent); color: var(--color-accent); }
+
+  .table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  .table th {
+    text-align: left; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase;
+    color: color-mix(in srgb, var(--color-text) 60%, transparent);
+    padding: 9.2px; border-bottom: 1px solid var(--color-divider);
+    font-weight: 600;
+  }
+  .table td {
+    padding: 9.2px; border-bottom: 1px solid var(--color-divider);
+  }
+  .table tbody tr:hover { background: color-mix(in srgb, var(--color-text) 4%, transparent); }
+
+  .rowlead:hover {
+    background: color-mix(in srgb, var(--color-accent) 7%, transparent) !important;
+    cursor: pointer;
+  }
+  .navitem:hover { background: rgba(255, 255, 255, 0.05) !important; }
+
+  .hr {
+    height: 1px; border: 0; margin: 18.4px 0;
+    background: var(--color-divider);
+  }
+}
