@@ -14,6 +14,9 @@ import { ParentView } from "@/views/parent";
 import { AiView } from "@/views/ai";
 import { AdminView } from "@/views/admin";
 import { TemplatesView } from "@/views/templates";
+import { PipelinesView } from "@/views/pipelines";
+import { KbView } from "@/views/kb";
+import { JourneysView } from "@/views/journeys";
 
 export function ViewRouter() {
   const { view } = useView();
@@ -45,6 +48,12 @@ export function ViewRouter() {
       return <AdminView />;
     case "templates":
       return <TemplatesView />;
+    case "pipelines":
+      return <PipelinesView />;
+    case "kb":
+      return <KbView />;
+    case "journeys":
+      return <JourneysView />;
     default:
       return null;
   }

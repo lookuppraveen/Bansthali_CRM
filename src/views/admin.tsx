@@ -1,8 +1,10 @@
 "use client";
 
+import { useState } from "react";
 import { Icon } from "@/components/icon";
 import { ADM_CONFIG, ADM_INTEG } from "@/lib/mock-data";
-import { useAdmin } from "@/lib/api";
+import { useAdmin, useUsers } from "@/lib/api";
+import { UserDialog } from "@/components/user-dialog";
 
 const roleLabels: Record<string, string> = {
   super_admin: "Super Admin / IT",
@@ -21,10 +23,24 @@ function timeShort(iso: string) {
   return d.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
 }
 
+interface UserRow {
+  id: string;
+  email: string;
+  name: string;
+  role: string;
+  initials: string;
+  title: string | null;
+  active: boolean;
+}
+
 export function AdminView() {
-  const { data, isLoading } = useAdmin();
-  const users = data?.users ?? [];
-  const audit = data?.audit ?? [];
+  const { data: admin, isLoading: adminLoading } = useAdmin();
+  const { data: usersData, isLoading: usersLoading } = useUsers();
+  const audit = admin?.audit ?? [];
+  const users = usersData?.users ?? [];
+
+  const [editing, setEditing] = useState<UserRow | null>(null);
+  const [creating, setCreating] = useState(false);
 
   return (
     <section className="view">
@@ -52,27 +68,35 @@ export function AdminView() {
 
       <div className="grid gap-5 items-start" style={{ gridTemplateColumns: "1.5fr 1fr" }}>
         <div className="card" style={{ padding: 0, overflow: "hidden" }}>
-          <div style={{ padding: "13px 16px", borderBottom: "1px solid var(--color-divider)" }}>
+          <div
+            className="flex items-center justify-between"
+            style={{ padding: "13px 16px", borderBottom: "1px solid var(--color-divider)" }}
+          >
             <h5 style={{ margin: 0 }}>Users &amp; roles</h5>
+            <button className="btn btn-primary" style={{ padding: "5px 12px", gap: 6 }} onClick={() => setCreating(true)}>
+              <Icon name="plus" size={13} />
+              New user
+            </button>
           </div>
           <table className="table">
             <thead>
               <tr>
                 <th style={{ paddingLeft: 16 }}>User</th>
                 <th>Email</th>
-                <th style={{ paddingRight: 16 }}>Role</th>
+                <th>Role</th>
+                <th style={{ paddingRight: 16, width: 100 }}></th>
               </tr>
             </thead>
             <tbody>
-              {isLoading && (
+              {usersLoading && (
                 <tr>
-                  <td colSpan={3} style={{ padding: 20, textAlign: "center", color: "var(--color-muted)" }}>
+                  <td colSpan={4} style={{ padding: 20, textAlign: "center", color: "var(--color-muted)" }}>
                     Loading…
                   </td>
                 </tr>
               )}
               {users.map((u) => (
-                <tr key={u.id}>
+                <tr key={u.id} style={{ opacity: u.active ? 1 : 0.55 }}>
                   <td style={{ paddingLeft: 16 }}>
                     <div className="flex items-center gap-2">
                       <div
@@ -87,16 +111,40 @@ export function AdminView() {
                         {u.initials}
                       </div>
                       <div>
-                        <div style={{ fontSize: 12.5 }}>{u.name}</div>
+                        <div style={{ fontSize: 12.5 }}>
+                          {u.name}
+                          {!u.active && (
+                            <span
+                              style={{
+                                fontSize: 10,
+                                color: "#b4442e",
+                                marginLeft: 6,
+                                letterSpacing: ".05em",
+                                textTransform: "uppercase",
+                              }}
+                            >
+                              inactive
+                            </span>
+                          )}
+                        </div>
                         <div style={{ fontSize: 10.5, color: "var(--color-muted)" }}>{u.title ?? ""}</div>
                       </div>
                     </div>
                   </td>
                   <td style={{ fontSize: 12, color: "var(--color-muted)" }}>{u.email}</td>
-                  <td style={{ paddingRight: 16 }}>
+                  <td>
                     <span className="tag tag-neutral" style={{ whiteSpace: "nowrap" }}>
                       {roleLabels[u.role] ?? u.role}
                     </span>
+                  </td>
+                  <td style={{ paddingRight: 16, textAlign: "right" }}>
+                    <button
+                      className="btn btn-secondary"
+                      style={{ padding: "3px 10px", fontSize: 12 }}
+                      onClick={() => setEditing(u)}
+                    >
+                      Edit
+                    </button>
                   </td>
                 </tr>
               ))}
@@ -117,6 +165,9 @@ export function AdminView() {
           </div>
           <div className="card">
             <h5 style={{ margin: "0 0 8px" }}>Audit trail</h5>
+            {adminLoading && (
+              <div style={{ fontSize: 12, color: "var(--color-muted)", padding: "8px 0" }}>Loading…</div>
+            )}
             {audit.map((a) => (
               <div key={a.id} className="flex gap-2.5" style={{ padding: "8px 0", borderBottom: "1px solid var(--color-divider)" }}>
                 <span
@@ -139,6 +190,16 @@ export function AdminView() {
           </div>
         </div>
       </div>
+
+      {(creating || editing) && (
+        <UserDialog
+          user={editing}
+          onClose={() => {
+            setCreating(false);
+            setEditing(null);
+          }}
+        />
+      )}
     </section>
   );
 }

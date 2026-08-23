@@ -24,7 +24,7 @@ export function LoginForm({ from, error }: { from?: string; error?: string }) {
         setErrMsg("Wrong email or password");
         return;
       }
-      router.push(from || "/");
+      router.push(from || "/app");
       router.refresh();
     });
   };

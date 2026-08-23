@@ -1,7 +1,8 @@
 "use client";
 
+import { useState } from "react";
 import { Icon } from "@/components/icon";
-import { useOps } from "@/lib/api";
+import { useOps, useReviewDoc } from "@/lib/api";
 
 export function OpsView() {
   const { data, isLoading } = useOps();
@@ -100,25 +101,147 @@ export function OpsView() {
             {verify.length === 0 && (
               <div style={{ fontSize: 12, color: "var(--color-muted)" }}>All caught up.</div>
             )}
-            {verify.map((d) => {
-              const color =
-                d.status === "Query raised" || d.status === "Rejected"
-                  ? "#b4442e"
-                  : "var(--color-neutral-600)";
-              return (
-                <div key={d.id} className="flex items-center gap-2.5" style={{ padding: "7px 0", borderBottom: "1px solid var(--color-divider)" }}>
-                  <Icon name="file-check" size={15} style={{ color }} />
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 12.5 }}>{d.lead?.name ?? "—"}</div>
-                    <div style={{ fontSize: 11, color: "var(--color-muted)" }}>{d.name}</div>
-                  </div>
-                  <span style={{ fontSize: 11, color }}>{d.status}</span>
-                </div>
-              );
-            })}
+            {verify.map((d) => (
+              <VerificationRow key={d.id} doc={d} />
+            ))}
           </div>
         </div>
       </div>
     </section>
+  );
+}
+
+// ── Verification row with approve / reject / query actions ─────
+function VerificationRow({
+  doc,
+}: {
+  doc: {
+    id: number;
+    name: string;
+    status: string;
+    hasFile: boolean;
+    fileName: string | null;
+    fileSize: number | null;
+    note: string | null;
+    lead: { name: string } | null;
+  };
+}) {
+  const review = useReviewDoc();
+  const [rejecting, setRejecting] = useState(false);
+  const [note, setNote] = useState("");
+
+  const color =
+    doc.status === "Query raised" || doc.status === "Rejected"
+      ? "#b4442e"
+      : doc.status === "Pending"
+        ? "var(--color-accent-600)"
+        : "var(--color-neutral-600)";
+
+  const approve = () => review.mutate({ id: doc.id, status: "Verified", note: null });
+  const reject = () => {
+    if (!note.trim()) return;
+    review.mutate({ id: doc.id, status: "Rejected", note: note.trim() });
+    setRejecting(false);
+    setNote("");
+  };
+  const query = () => {
+    if (!note.trim()) return;
+    review.mutate({ id: doc.id, status: "Query raised", note: note.trim() });
+    setRejecting(false);
+    setNote("");
+  };
+
+  return (
+    <div style={{ padding: "8px 0", borderBottom: "1px solid var(--color-divider)" }}>
+      <div className="flex items-center gap-2.5">
+        <Icon name="file-check" size={15} style={{ color, flex: "none" }} />
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 12.5 }}>{doc.lead?.name ?? "—"}</div>
+          <div style={{ fontSize: 11, color: "var(--color-muted)" }}>
+            {doc.name}
+            {doc.hasFile && doc.fileName && ` · ${doc.fileName} (${Math.round((doc.fileSize ?? 0) / 1024)} KB)`}
+          </div>
+        </div>
+        <span style={{ fontSize: 11, color, whiteSpace: "nowrap" }}>{doc.status}</span>
+      </div>
+
+      {doc.note && (
+        <div style={{ fontSize: 11, color: "#b4442e", marginTop: 4, marginLeft: 25 }}>
+          Query: {doc.note}
+        </div>
+      )}
+
+      {doc.hasFile && (
+        <div className="flex items-center gap-2 mt-2" style={{ marginLeft: 25 }}>
+          <a
+            href={`/api/documents/${doc.id}/file`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="btn btn-secondary"
+            style={{ padding: "3px 10px", fontSize: 11.5, gap: 4 }}
+          >
+            <Icon name="eye" size={12} /> View
+          </a>
+          {!rejecting && (
+            <>
+              <button
+                className="btn btn-primary"
+                style={{ padding: "3px 10px", fontSize: 11.5, gap: 4 }}
+                onClick={approve}
+                disabled={review.isPending}
+              >
+                <Icon name="check" size={12} /> Approve
+              </button>
+              <button
+                className="btn btn-secondary"
+                style={{ padding: "3px 10px", fontSize: 11.5, color: "#b4442e", borderColor: "#b4442e", gap: 4 }}
+                onClick={() => setRejecting(true)}
+                disabled={review.isPending}
+              >
+                <Icon name="x" size={12} /> Reject / query
+              </button>
+            </>
+          )}
+          {rejecting && (
+            <>
+              <input
+                className="input"
+                style={{ flex: 1, minHeight: 28, padding: "4px 8px", fontSize: 12 }}
+                placeholder="Reason for rejection / query"
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+                autoFocus
+              />
+              <button
+                className="btn btn-secondary"
+                style={{ padding: "3px 10px", fontSize: 11.5, color: "#b4442e" }}
+                onClick={reject}
+                disabled={!note.trim() || review.isPending}
+              >
+                Reject
+              </button>
+              <button
+                className="btn btn-secondary"
+                style={{ padding: "3px 10px", fontSize: 11.5 }}
+                onClick={query}
+                disabled={!note.trim() || review.isPending}
+              >
+                Query
+              </button>
+              <button
+                className="btn btn-ghost"
+                style={{ padding: "3px 8px", fontSize: 11.5 }}
+                onClick={() => {
+                  setRejecting(false);
+                  setNote("");
+                }}
+              >
+                Cancel
+              </button>
+            </>
+          )}
+        </div>
+      )}
+    </div>
   );
 }

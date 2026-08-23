@@ -3,6 +3,7 @@
 import { Icon } from "@/components/icon";
 import { CRUMBS } from "@/lib/mock-data";
 import { useView } from "@/app/view-context";
+import { NotificationsBell } from "@/components/notifications-bell";
 
 export function Topbar() {
   const { view } = useView();
@@ -61,9 +62,7 @@ export function Topbar() {
         <Icon name="calendar" size={15} />
         Cycle 2026–27
       </button>
-      <button className="btn btn-icon btn-secondary" title="Notifications">
-        <Icon name="bell" size={16} />
-      </button>
+      <NotificationsBell />
     </header>
   );
 }

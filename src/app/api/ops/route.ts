@@ -33,12 +33,22 @@ export async function GET() {
       .from(schema.counsellingSlots)
       .orderBy(asc(schema.counsellingSlots.slotTime));
 
-    const verify = await db.query.documents.findMany({
-      where: sql`${schema.documents.status} in ('Pending','Query raised','Not uploaded')`,
+    const verifyRows = await db.query.documents.findMany({
+      where: sql`${schema.documents.status} in ('Pending','Query raised','Not uploaded','Rejected')`,
       with: { lead: { columns: { name: true } } },
       orderBy: desc(schema.documents.id),
-      limit: 20,
+      limit: 40,
     });
+    const verify = verifyRows.map((d) => ({
+      id: d.id,
+      name: d.name,
+      status: d.status,
+      hasFile: !!d.fileData,
+      fileName: d.fileName,
+      fileSize: d.fileSize,
+      note: d.note,
+      lead: d.lead,
+    }));
 
     return Response.json({ buat, merit, slots, verify });
   } catch (err) {

@@ -50,6 +50,301 @@ export function useTemplates(channel?: string) {
   });
 }
 
+export interface JourneyRow {
+  id: number;
+  name: string;
+  active: boolean;
+  trigger: string;
+  triggerStage: string | null;
+  delayHours: number;
+  channel: string;
+  templateId: number | null;
+  template: { id: number; name: string; channel: string } | null;
+  stats: { total: number; sent: number; failed: number; skipped: number };
+}
+
+export function useJourneys() {
+  return useQuery({
+    queryKey: ["journeys"],
+    queryFn: () => jsonFetch<{ journeys: JourneyRow[] }>("/api/journeys"),
+  });
+}
+
+export function useCreateJourney() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (v: {
+      name: string;
+      trigger: "enquiry_created" | "stage_entered" | "stage_stalled";
+      triggerStage?: string | null;
+      delayHours: number;
+      channel: "email" | "whatsapp" | "sms";
+      templateId: number;
+      active?: boolean;
+    }) => jsonFetch(`/api/journeys`, { method: "POST", body: JSON.stringify(v) }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["journeys"] }),
+  });
+}
+
+export function useUpdateJourney() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (v: {
+      id: number;
+      name?: string;
+      active?: boolean;
+      trigger?: "enquiry_created" | "stage_entered" | "stage_stalled";
+      triggerStage?: string | null;
+      delayHours?: number;
+      channel?: "email" | "whatsapp" | "sms";
+      templateId?: number;
+    }) => {
+      const { id, ...rest } = v;
+      return jsonFetch(`/api/journeys/${id}`, { method: "PATCH", body: JSON.stringify(rest) });
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["journeys"] }),
+  });
+}
+
+export function useDeleteJourney() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (v: { id: number }) => jsonFetch(`/api/journeys/${v.id}`, { method: "DELETE" }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["journeys"] }),
+  });
+}
+
+export function useRunJourneys() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () =>
+      jsonFetch<{
+        totals: { candidates: number; sent: number; failed: number; skipped: number };
+      }>(`/api/journeys/0/run`, { method: "POST" }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["journeys"] });
+      qc.invalidateQueries({ queryKey: ["leads"] });
+      qc.invalidateQueries({ queryKey: ["analytics"] });
+    },
+  });
+}
+
+export interface NotificationsData {
+  items: {
+    kind: "sla" | "task" | "assignment";
+    severity: "high" | "med" | "low";
+    leadId: number | null;
+    title: string;
+    detail: string;
+  }[];
+  counts: { total: number; high: number; sla: number; tasks: number };
+}
+
+export function useNotifications() {
+  return useQuery({
+    queryKey: ["notifications"],
+    queryFn: () => jsonFetch<NotificationsData>("/api/notifications"),
+    refetchInterval: 60_000, // poll every 60s
+  });
+}
+
+export interface KbDoc {
+  id: number;
+  title: string;
+  sourcePath: string;
+  language: string;
+  category: string;
+  updatedAt: string;
+  editable: boolean;
+  chunkCount: number;
+}
+
+export function useKbDocs() {
+  return useQuery({
+    queryKey: ["kb"],
+    queryFn: () => jsonFetch<{ documents: KbDoc[] }>("/api/kb"),
+  });
+}
+
+export function useKbDoc(id: number | null) {
+  return useQuery({
+    queryKey: ["kb", id],
+    enabled: id != null,
+    queryFn: () =>
+      jsonFetch<{
+        document: {
+          id: number;
+          title: string;
+          sourcePath: string;
+          language: string;
+          category: string;
+          rawSource: string | null;
+        };
+      }>(`/api/kb/${id}`),
+  });
+}
+
+export function useCreateKbDoc() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (v: { title: string; language?: string; category?: string; body: string }) =>
+      jsonFetch<{ id: number; chunksInserted: number }>(`/api/kb`, {
+        method: "POST",
+        body: JSON.stringify(v),
+      }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["kb"] }),
+  });
+}
+
+export function useUpdateKbDoc() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (v: { id: number; title?: string; language?: string; category?: string; body?: string }) => {
+      const { id, ...rest } = v;
+      return jsonFetch(`/api/kb/${id}`, { method: "PATCH", body: JSON.stringify(rest) });
+    },
+    onSuccess: (_d, v) => {
+      qc.invalidateQueries({ queryKey: ["kb"] });
+      qc.invalidateQueries({ queryKey: ["kb", v.id] });
+    },
+  });
+}
+
+export function useDeleteKbDoc() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (v: { id: number }) => jsonFetch(`/api/kb/${v.id}`, { method: "DELETE" }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["kb"] }),
+  });
+}
+
+export interface PipelineRow {
+  id: number;
+  name: string;
+  programmeFilter: string | null;
+  active: boolean;
+  stages: {
+    id: number;
+    stage: string;
+    orderIndex: number;
+    slaHours: number;
+    visible: boolean;
+  }[];
+}
+
+export function usePipelines() {
+  return useQuery({
+    queryKey: ["pipelines"],
+    queryFn: () => jsonFetch<{ pipelines: PipelineRow[] }>("/api/pipelines"),
+  });
+}
+
+export function useCreatePipeline() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (v: {
+      name: string;
+      programmeFilter?: string | null;
+      stages: { stage: string; slaHours: number; visible: boolean }[];
+    }) => jsonFetch(`/api/pipelines`, { method: "POST", body: JSON.stringify(v) }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["pipelines"] }),
+  });
+}
+
+export function useUpdatePipeline() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (v: {
+      id: number;
+      name?: string;
+      programmeFilter?: string | null;
+      active?: boolean;
+      stages?: { stage: string; slaHours: number; visible: boolean }[];
+    }) => {
+      const { id, ...rest } = v;
+      return jsonFetch(`/api/pipelines/${id}`, { method: "PATCH", body: JSON.stringify(rest) });
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["pipelines"] }),
+  });
+}
+
+export function useDeletePipeline() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (v: { id: number }) => jsonFetch(`/api/pipelines/${v.id}`, { method: "DELETE" }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["pipelines"] }),
+  });
+}
+
+export function useUsers() {
+  return useQuery({
+    queryKey: ["users"],
+    queryFn: () =>
+      jsonFetch<{
+        users: {
+          id: string;
+          email: string;
+          name: string;
+          role: string;
+          initials: string;
+          title: string | null;
+          active: boolean;
+        }[];
+      }>("/api/users"),
+  });
+}
+
+export function useCreateUser() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (v: {
+      email: string;
+      name: string;
+      role: string;
+      initials: string;
+      title?: string;
+      password: string;
+    }) => jsonFetch(`/api/users`, { method: "POST", body: JSON.stringify(v) }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["users"] });
+      qc.invalidateQueries({ queryKey: ["admin"] });
+    },
+  });
+}
+
+export function useUpdateUser() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (v: {
+      id: string;
+      name?: string;
+      role?: string;
+      initials?: string;
+      title?: string | null;
+      active?: boolean;
+      password?: string;
+    }) => {
+      const { id, ...rest } = v;
+      return jsonFetch(`/api/users/${id}`, { method: "PATCH", body: JSON.stringify(rest) });
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["users"] });
+      qc.invalidateQueries({ queryKey: ["admin"] });
+    },
+  });
+}
+
+export function useDeactivateUser() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (v: { id: string }) => jsonFetch(`/api/users/${v.id}`, { method: "DELETE" }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["users"] });
+      qc.invalidateQueries({ queryKey: ["admin"] });
+    },
+  });
+}
+
 export function useCreateTemplate() {
   const qc = useQueryClient();
   return useMutation({
@@ -180,6 +475,34 @@ export function useImportLeads() {
   });
 }
 
+export function useBulkLeads() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (
+      v:
+        | { action: "assign"; ids: number[]; ownerId: string }
+        | { action: "advance"; ids: number[]; stage: string }
+        | {
+            action: "send";
+            ids: number[];
+            channel: "email" | "whatsapp" | "sms";
+            templateId?: number;
+            subject?: string;
+            body: string;
+          }
+    ) =>
+      jsonFetch<{ ok: true; count?: number; sent?: number; failed?: number }>(`/api/leads/bulk`, {
+        method: "POST",
+        body: JSON.stringify(v),
+      }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["leads"] });
+      qc.invalidateQueries({ queryKey: ["dashboard"] });
+      qc.invalidateQueries({ queryKey: ["analytics"] });
+    },
+  });
+}
+
 export function useUpdateLead() {
   const qc = useQueryClient();
   return useMutation({
@@ -257,14 +580,79 @@ export function useAdmin() {
   return useQuery({ queryKey: ["admin"], queryFn: () => jsonFetch<AdminData>("/api/admin") });
 }
 
+export interface StudentDoc {
+  id: number;
+  name: string;
+  status: string;
+  required: boolean;
+  uploadedAt: string | null;
+  verifiedAt: string | null;
+  note: string | null;
+  hasFile: boolean;
+  fileName: string | null;
+  fileSize: number | null;
+  fileMimeType: string | null;
+}
+
 export function useStudentPortal() {
   return useQuery({
     queryKey: ["portal", "student"],
     queryFn: () =>
       jsonFetch<{
-        lead: (LeadDetail & { documents: { id: number; name: string; status: string }[] }) | null;
+        lead:
+          | (Omit<LeadDetail, "documents"> & {
+              documents: StudentDoc[];
+            })
+          | null;
         checklist: { name: string; done: boolean }[];
       }>("/api/portal/student"),
+  });
+}
+
+export function useUploadStudentDoc() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (v: { docId: number; file: File }) => {
+      const dataUrl = await new Promise<string>((resolve, reject) => {
+        const r = new FileReader();
+        r.onload = () => resolve(r.result as string);
+        r.onerror = () => reject(new Error("File read failed"));
+        r.readAsDataURL(v.file);
+      });
+      return jsonFetch(`/api/portal/student/documents/${v.docId}/upload`, {
+        method: "POST",
+        body: JSON.stringify({
+          fileName: v.file.name,
+          mimeType: v.file.type,
+          size: v.file.size,
+          dataUrl,
+        }),
+      });
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["portal", "student"] });
+      qc.invalidateQueries({ queryKey: ["portal", "parent"] });
+      qc.invalidateQueries({ queryKey: ["ops"] });
+    },
+  });
+}
+
+export function useReviewDoc() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (v: { id: number; status: string; note?: string | null }) =>
+      jsonFetch(`/api/documents/${v.id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ status: v.status, note: v.note ?? null }),
+      }),
+    onSuccess: (_d, v) => {
+      qc.invalidateQueries({ queryKey: ["ops"] });
+      qc.invalidateQueries({ queryKey: ["lead"] });
+      qc.invalidateQueries({ queryKey: ["portal", "student"] });
+      qc.invalidateQueries({ queryKey: ["portal", "parent"] });
+      qc.invalidateQueries({ queryKey: ["notifications"] });
+      void v;
+    },
   });
 }
 
@@ -367,7 +755,16 @@ export interface OpsData {
   buat: { label: string; value: string; icon: string }[];
   merit: { rank: string; leadId: number | null; program: string; buatScore: string | null; aggregate: string | null; status: string }[];
   slots: { id: number; slotTime: string; program: string; ranks: string; booked: number; capacity: number }[];
-  verify: { id: number; name: string; status: string; lead: { name: string } | null }[];
+  verify: {
+    id: number;
+    name: string;
+    status: string;
+    hasFile: boolean;
+    fileName: string | null;
+    fileSize: number | null;
+    note: string | null;
+    lead: { name: string } | null;
+  }[];
 }
 
 export interface AdminData {

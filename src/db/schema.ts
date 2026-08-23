@@ -211,10 +211,17 @@ export const documents = pgTable("documents", {
     .references(() => leads.id, { onDelete: "cascade" }),
   name: varchar("name", { length: 120 }).notNull(),
   status: docStatusEnum("status").notNull().default("Not uploaded"),
+  required: boolean("required").notNull().default(true),
   uploadedAt: timestamp("uploaded_at", { withTimezone: true }),
   verifiedAt: timestamp("verified_at", { withTimezone: true }),
   verifierId: uuid("verifier_id").references(() => users.id),
-  note: text("note"),
+  note: text("note"), // verifier's note (rejection reason / query text)
+
+  // File payload — base64 data URL for portability. Cap at ~2MB per file.
+  fileData: text("file_data"),
+  fileName: varchar("file_name", { length: 200 }),
+  fileMimeType: varchar("file_mime_type", { length: 100 }),
+  fileSize: integer("file_size"),
 });
 
 // ══════════════════════════════════════════════════════════════════
@@ -289,6 +296,92 @@ export const communications = pgTable("communications", {
 });
 
 // ══════════════════════════════════════════════════════════════════
+// Journeys · drip automation
+// ══════════════════════════════════════════════════════════════════
+
+export const journeyTriggerEnum = pgEnum("journey_trigger", [
+  "enquiry_created",
+  "stage_entered",
+  "stage_stalled",
+]);
+
+export const journeyRunStatusEnum = pgEnum("journey_run_status", [
+  "queued",
+  "sent",
+  "skipped",
+  "failed",
+]);
+
+export const journeys = pgTable("journeys", {
+  id: serial("id").primaryKey(),
+  name: varchar("name", { length: 160 }).notNull(),
+  active: boolean("active").notNull().default(true),
+  trigger: journeyTriggerEnum("trigger").notNull(),
+  triggerStage: stageEnum("trigger_stage"), // required for stage_entered / stage_stalled
+  delayHours: integer("delay_hours").notNull().default(0),
+  channel: commChannelEnum("channel").notNull(),
+  templateId: integer("template_id").references(() => templates.id, { onDelete: "set null" }),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+export const journeyRuns = pgTable("journey_runs", {
+  id: serial("id").primaryKey(),
+  journeyId: integer("journey_id")
+    .notNull()
+    .references(() => journeys.id, { onDelete: "cascade" }),
+  leadId: integer("lead_id")
+    .notNull()
+    .references(() => leads.id, { onDelete: "cascade" }),
+  status: journeyRunStatusEnum("status").notNull(),
+  error: text("error"),
+  providerMessageId: varchar("provider_message_id", { length: 120 }),
+  ranAt: timestamp("ran_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+export const journeysRelations = relations(journeys, ({ one, many }) => ({
+  template: one(templates, { fields: [journeys.templateId], references: [templates.id] }),
+  runs: many(journeyRuns),
+}));
+
+export const journeyRunsRelations = relations(journeyRuns, ({ one }) => ({
+  journey: one(journeys, { fields: [journeyRuns.journeyId], references: [journeys.id] }),
+  lead: one(leads, { fields: [journeyRuns.leadId], references: [leads.id] }),
+}));
+
+// ══════════════════════════════════════════════════════════════════
+// Pipeline configuration
+// ══════════════════════════════════════════════════════════════════
+
+export const pipelines = pgTable("pipelines", {
+  id: serial("id").primaryKey(),
+  name: varchar("name", { length: 120 }).notNull(),
+  programmeFilter: varchar("programme_filter", { length: 120 }), // null = applies to all
+  active: boolean("active").notNull().default(true),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+export const pipelineStages = pgTable("pipeline_stages", {
+  id: serial("id").primaryKey(),
+  pipelineId: integer("pipeline_id")
+    .notNull()
+    .references(() => pipelines.id, { onDelete: "cascade" }),
+  stage: stageEnum("stage").notNull(),
+  orderIndex: integer("order_index").notNull(),
+  slaHours: integer("sla_hours").notNull().default(24),
+  visible: boolean("visible").notNull().default(true),
+  entryCriteria: text("entry_criteria"),
+});
+
+export const pipelinesRelations = relations(pipelines, ({ many }) => ({
+  stages: many(pipelineStages),
+}));
+
+export const pipelineStagesRelations = relations(pipelineStages, ({ one }) => ({
+  pipeline: one(pipelines, { fields: [pipelineStages.pipelineId], references: [pipelines.id] }),
+}));
+
+// ══════════════════════════════════════════════════════════════════
 // Payments
 // ══════════════════════════════════════════════════════════════════
 
@@ -341,6 +434,9 @@ export const kbDocuments = pgTable("kb_documents", {
   language: varchar("language", { length: 10 }).notNull().default("en"),
   category: varchar("category", { length: 60 }).notNull().default("general"),
   contentHash: varchar("content_hash", { length: 64 }).notNull(),
+  // Full markdown body for DB-managed docs. Filesystem-ingested docs keep this
+  // null and are managed via `npm run kb:ingest`.
+  rawSource: text("raw_source"),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 });
 

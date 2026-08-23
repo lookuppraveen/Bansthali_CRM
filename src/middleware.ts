@@ -6,19 +6,25 @@ import { authConfig } from "@/auth.config";
 const { auth } = NextAuth(authConfig);
 
 export default auth((req) => {
-  const isLogin = req.nextUrl.pathname.startsWith("/login");
-  const isApi = req.nextUrl.pathname.startsWith("/api");
+  const path = req.nextUrl.pathname;
+  const isSplash = path === "/";
+  const isLogin = path.startsWith("/login");
+  const isApp = path.startsWith("/app");
+  const isApi = path.startsWith("/api");
   const authed = !!req.auth;
 
-  if (!authed && !isLogin && !isApi) {
+  // Unauthenticated users can see splash + login. Anything else (including /app)
+  // requires auth.
+  if (!authed && !isSplash && !isLogin && !isApi) {
     const url = req.nextUrl.clone();
     url.pathname = "/login";
-    url.searchParams.set("from", req.nextUrl.pathname);
+    url.searchParams.set("from", path);
     return Response.redirect(url);
   }
+  // Signed-in users on /login → send to app.
   if (authed && isLogin) {
     const url = req.nextUrl.clone();
-    url.pathname = "/";
+    url.pathname = "/app";
     url.searchParams.delete("from");
     return Response.redirect(url);
   }

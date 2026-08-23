@@ -1,5 +1,6 @@
 import { db, schema } from "@/db/client";
 import { requireSession, toResponse, writeAudit } from "@/lib/rbac";
+import { computeSlaMany } from "@/lib/sla";
 import { and, desc, eq, ilike, or } from "drizzle-orm";
 import { z } from "zod";
 
@@ -50,7 +51,9 @@ export async function GET(req: Request) {
       limit: 200,
     });
 
-    return Response.json({ leads: rows });
+    // Overlay a freshly-computed SLA on top of the stored value.
+    const withSla = await computeSlaMany(rows);
+    return Response.json({ leads: withSla });
   } catch (err) {
     return toResponse(err);
   }

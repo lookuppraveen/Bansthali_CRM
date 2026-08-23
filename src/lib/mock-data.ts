@@ -423,7 +423,10 @@ export const NAV_GROUPS = [
   {
     label: "System",
     items: [
+      { k: "pipelines", label: "Pipelines", icon: "git-branch" },
       { k: "templates", label: "Templates", icon: "file-text" },
+      { k: "journeys", label: "Journeys", icon: "workflow" },
+      { k: "kb", label: "Knowledge Base", icon: "library" },
       { k: "admin", label: "Admin & RBAC", icon: "shield" },
     ],
   },
@@ -443,6 +446,9 @@ export const CRUMBS: Record<string, [string, string]> = {
   ai: ["Engagement", "AI Assistant"],
   admin: ["System", "Admin & RBAC"],
   templates: ["System", "Templates"],
+  pipelines: ["System", "Pipelines"],
+  kb: ["System", "Knowledge Base"],
+  journeys: ["System", "Journeys"],
 };
 
 export type ViewKey =
@@ -458,4 +464,7 @@ export type ViewKey =
   | "parent"
   | "ai"
   | "admin"
-  | "templates";
+  | "templates"
+  | "pipelines"
+  | "kb"
+  | "journeys";

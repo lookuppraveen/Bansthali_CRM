@@ -13,10 +13,10 @@ export type Role =
 
 // Which sidebar keys each role can see.
 export const VIEW_ACCESS: Record<Role, ViewKey[]> = {
-  super_admin: ["dashboard", "leads", "funnel", "workbench", "ops", "erp", "analytics", "student", "parent", "ai", "admin", "templates"],
-  admissions_head: ["dashboard", "leads", "funnel", "workbench", "ops", "erp", "analytics", "ai", "admin", "templates"],
+  super_admin: ["dashboard", "leads", "funnel", "workbench", "ops", "erp", "analytics", "student", "parent", "ai", "admin", "templates", "pipelines", "kb", "journeys"],
+  admissions_head: ["dashboard", "leads", "funnel", "workbench", "ops", "erp", "analytics", "ai", "admin", "templates", "pipelines", "kb", "journeys"],
   counsellor: ["dashboard", "leads", "funnel", "workbench", "ops", "ai"],
-  marketing: ["dashboard", "leads", "analytics", "ai", "templates"],
+  marketing: ["dashboard", "leads", "analytics", "ai", "templates", "kb"],
   front_office: ["leads", "ai"],
   management: ["dashboard", "analytics"],
   student: ["student", "ai"],

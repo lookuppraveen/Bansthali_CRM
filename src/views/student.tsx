@@ -1,9 +1,10 @@
 "use client";
 
+import { useRef, useState } from "react";
 import { Icon } from "@/components/icon";
 import { initials } from "@/lib/format";
 import { STU_ANN } from "@/lib/mock-data";
-import { useStudentPortal } from "@/lib/api";
+import { type StudentDoc, useStudentPortal, useUploadStudentDoc } from "@/lib/api";
 
 export function StudentView() {
   const { data, isLoading } = useStudentPortal();
@@ -169,6 +170,11 @@ export function StudentView() {
         </div>
       </div>
 
+      {/* Documents section — upload against required docs, see approval status */}
+      <div className="mb-5">
+        <DocumentsSection docs={lead.documents} />
+      </div>
+
       <div className="grid gap-5 items-start" style={{ gridTemplateColumns: "1.3fr 1fr" }}>
         <div className="card">
           <h5 style={{ margin: "0 0 8px" }}>Announcements</h5>
@@ -216,5 +222,173 @@ export function StudentView() {
         </div>
       </div>
     </section>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════
+// Documents card — upload against each required doc, see status
+// ══════════════════════════════════════════════════════════════
+
+function DocumentsSection({ docs }: { docs: StudentDoc[] }) {
+  const verified = docs.filter((d) => d.status === "Verified" || d.status === "Issued").length;
+  const rejected = docs.filter((d) => d.status === "Rejected" || d.status === "Query raised").length;
+  const pending = docs.filter((d) => d.status === "Pending").length;
+
+  return (
+    <div className="card">
+      <div className="flex items-center justify-between mb-2">
+        <h5 style={{ margin: 0 }}>Documents</h5>
+        <div className="flex items-center gap-3" style={{ fontSize: 11.5 }}>
+          <span style={{ color: "var(--color-accent-700)" }}>{verified} verified</span>
+          <span style={{ color: "var(--color-neutral-600)" }}>{pending} pending</span>
+          {rejected > 0 && <span style={{ color: "#b4442e" }}>{rejected} needs action</span>}
+        </div>
+      </div>
+      <div style={{ fontSize: 12, color: "var(--color-muted)", marginBottom: 12 }}>
+        Upload the required documents below. Accepted formats: PDF, JPG, PNG, WEBP · max ~900 KB per file. Your counsellor is
+        notified as soon as you upload.
+      </div>
+      <div style={{ borderTop: "1px solid var(--color-divider)" }}>
+        {docs.map((d) => (
+          <DocumentRow key={d.id} doc={d} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function DocumentRow({ doc }: { doc: StudentDoc }) {
+  const upload = useUploadStudentDoc();
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [err, setErr] = useState<string | null>(null);
+
+  const needsUpload =
+    doc.status === "Not uploaded" || doc.status === "Rejected" || doc.status === "Query raised";
+  const canReplace = doc.status === "Pending" || doc.status === "Verified" || doc.status === "Issued";
+
+  const statusStyle = ((): { color: string; bg: string; label: string } => {
+    switch (doc.status) {
+      case "Verified":
+      case "Issued":
+        return { color: "var(--color-accent-800)", bg: "var(--color-accent-100)", label: "Approved" };
+      case "Pending":
+        return { color: "var(--color-neutral-800)", bg: "var(--color-neutral-100)", label: "Under review" };
+      case "Rejected":
+        return { color: "#fff", bg: "#b4442e", label: "Rejected — re-upload" };
+      case "Query raised":
+        return { color: "#fff", bg: "#b4442e", label: "Query raised — re-upload" };
+      case "Not uploaded":
+      default:
+        return { color: "var(--color-neutral-800)", bg: "var(--color-neutral-100)", label: "Awaiting upload" };
+    }
+  })();
+
+  const onFilePicked = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setErr(null);
+    if (file.size > 900 * 1024) {
+      setErr("File must be under ~900 KB. Compress it and try again.");
+      e.target.value = "";
+      return;
+    }
+    try {
+      await upload.mutateAsync({ docId: doc.id, file });
+    } catch (e) {
+      setErr((e as Error).message);
+    } finally {
+      e.target.value = "";
+    }
+  };
+
+  return (
+    <div
+      className="flex items-center gap-3"
+      style={{ padding: "12px 0", borderBottom: "1px solid var(--color-divider)" }}
+    >
+      <input
+        ref={inputRef}
+        type="file"
+        accept="application/pdf,image/jpeg,image/png,image/webp"
+        style={{ display: "none" }}
+        onChange={onFilePicked}
+      />
+      <Icon
+        name={
+          doc.status === "Verified" || doc.status === "Issued"
+            ? "check-circle-2"
+            : doc.status === "Rejected" || doc.status === "Query raised"
+              ? "alert-triangle"
+              : doc.status === "Pending"
+                ? "file-clock"
+                : "file"
+        }
+        size={18}
+        style={{ color: statusStyle.color === "#fff" ? statusStyle.bg : statusStyle.color, flex: "none" }}
+      />
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: 13.5 }}>
+          {doc.name}
+          {doc.required && (
+            <span style={{ fontSize: 10, color: "#b4442e", marginLeft: 6, letterSpacing: ".05em", textTransform: "uppercase" }}>
+              required
+            </span>
+          )}
+        </div>
+        <div style={{ fontSize: 11.5, color: "var(--color-muted)", marginTop: 2 }}>
+          {doc.hasFile && doc.fileName ? (
+            <>
+              {doc.fileName} · {Math.round((doc.fileSize ?? 0) / 1024)} KB
+              {doc.uploadedAt && ` · uploaded ${new Date(doc.uploadedAt).toLocaleDateString()}`}
+            </>
+          ) : (
+            "No file uploaded yet"
+          )}
+          {doc.note && (
+            <div style={{ color: "#b4442e", marginTop: 2 }}>
+              <strong>Counsellor:</strong> {doc.note}
+            </div>
+          )}
+          {err && <div style={{ color: "#b4442e", marginTop: 2 }}>{err}</div>}
+        </div>
+      </div>
+
+      <span
+        className="tag"
+        style={{
+          background: statusStyle.bg,
+          color: statusStyle.color,
+          whiteSpace: "nowrap",
+        }}
+      >
+        {statusStyle.label}
+      </span>
+
+      {doc.hasFile && (
+        <a
+          href={`/api/documents/${doc.id}/file`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="btn btn-secondary"
+          style={{ padding: "5px 12px", fontSize: 12, gap: 4 }}
+        >
+          <Icon name="eye" size={13} />
+          View
+        </a>
+      )}
+
+      {(needsUpload || canReplace) && (
+        <button
+          type="button"
+          className="btn btn-primary"
+          style={{ padding: "5px 12px", fontSize: 12, gap: 4 }}
+          onClick={() => inputRef.current?.click()}
+          disabled={upload.isPending}
+        >
+          <Icon name="upload" size={13} />
+          {upload.isPending ? "Uploading…" : canReplace ? "Replace" : "Upload"}
+        </button>
+      )}
+    </div>
   );
 }

@@ -2,6 +2,7 @@
 
 import { Icon } from "@/components/icon";
 import { useAnalytics } from "@/lib/api";
+import { downloadCsv, toCsv } from "@/lib/csv";
 
 export function AnalyticsView() {
   const { data, isLoading } = useAnalytics();
@@ -13,14 +14,35 @@ export function AnalyticsView() {
 
   return (
     <section className="view">
-      <div className="mb-5">
-        <div style={{ fontSize: 11, letterSpacing: ".13em", textTransform: "uppercase", color: "var(--color-accent)", marginBottom: 6 }}>
-          Insight · Decision-grade
+      <div className="flex items-end gap-4 mb-5">
+        <div className="flex-1">
+          <div style={{ fontSize: 11, letterSpacing: ".13em", textTransform: "uppercase", color: "var(--color-accent)", marginBottom: 6 }}>
+            Insight · Decision-grade
+          </div>
+          <h2 style={{ margin: "0 0 4px" }}>Analytics &amp; Dashboards</h2>
+          <p className="text-muted" style={{ margin: 0, fontSize: 14 }}>
+            Source ROI, funnel, counsellor performance and engagement — computed live from the pipeline.
+          </p>
         </div>
-        <h2 style={{ margin: "0 0 4px" }}>Analytics &amp; Dashboards</h2>
-        <p className="text-muted" style={{ margin: 0, fontSize: 14 }}>
-          Source ROI, funnel, counsellor performance and engagement — computed live from the pipeline.
-        </p>
+        <button
+          className="btn btn-secondary"
+          style={{ gap: 7 }}
+          disabled={roi.length === 0}
+          onClick={() => {
+            const ts = new Date().toISOString().slice(0, 10);
+            downloadCsv(
+              `banasthali-source-roi-${ts}.csv`,
+              toCsv(roi, ["src", "leads", "enr", "conv", "cost"])
+            );
+            downloadCsv(
+              `banasthali-funnel-${ts}.csv`,
+              toCsv(funnel, ["stage", "count", "conv"])
+            );
+          }}
+        >
+          <Icon name="download" size={15} />
+          Export CSV
+        </button>
       </div>
 
       <div className="grid grid-cols-4 gap-4" style={{ marginBottom: 22 }}>
