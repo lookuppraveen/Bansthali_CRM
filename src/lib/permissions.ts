@@ -13,13 +13,13 @@ export type Role =
 
 // Which sidebar keys each role can see.
 export const VIEW_ACCESS: Record<Role, ViewKey[]> = {
-  super_admin: ["dashboard", "leads", "funnel", "workbench", "ops", "erp", "analytics", "student", "parent", "ai", "admin", "templates", "pipelines", "kb", "journeys"],
-  admissions_head: ["dashboard", "leads", "funnel", "workbench", "ops", "erp", "analytics", "ai", "admin", "templates", "pipelines", "kb", "journeys"],
-  counsellor: ["dashboard", "leads", "funnel", "workbench", "ops", "ai"],
-  marketing: ["dashboard", "leads", "analytics", "ai", "templates", "kb"],
-  front_office: ["leads", "ai"],
+  super_admin: ["dashboard", "leads", "funnel", "workbench", "ops", "erp", "analytics", "student", "parent", "ai", "admin", "templates", "pipelines", "kb", "journeys", "notifications"],
+  admissions_head: ["dashboard", "leads", "funnel", "workbench", "ops", "erp", "analytics", "ai", "admin", "templates", "pipelines", "kb", "journeys", "notifications"],
+  counsellor: ["dashboard", "leads", "funnel", "workbench", "ops", "ai", "notifications"],
+  marketing: ["dashboard", "leads", "analytics", "ai", "templates", "kb", "notifications"],
+  front_office: ["leads", "ai", "notifications"],
   management: ["dashboard", "analytics"],
-  student: ["student", "ai"],
+  student: ["student", "ai", "notifications"],
   parent: ["parent"],
   dpo: ["admin", "analytics"],
 };

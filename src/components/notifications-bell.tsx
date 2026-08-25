@@ -19,7 +19,7 @@ const KIND_ICON: Record<string, string> = {
 
 export function NotificationsBell() {
   const { data } = useNotifications();
-  const { openLead } = useView();
+  const { openLead, setView } = useView();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -103,7 +103,7 @@ export function NotificationsBell() {
             </div>
           )}
 
-          {items.map((n, i) => (
+          {items.slice(0, 8).map((n, i) => (
             <div
               key={i}
               className={n.leadId ? "rowlead" : undefined}
@@ -131,6 +131,28 @@ export function NotificationsBell() {
               </div>
             </div>
           ))}
+
+          <button
+            type="button"
+            onClick={() => {
+              setView("notifications");
+              setOpen(false);
+            }}
+            style={{
+              display: "block",
+              width: "100%",
+              padding: "10px 14px",
+              textAlign: "center",
+              background: "transparent",
+              border: "none",
+              cursor: "pointer",
+              color: "var(--color-accent)",
+              fontSize: 12,
+              fontFamily: "var(--font-heading)",
+            }}
+          >
+            View all notifications →
+          </button>
         </div>
       )}
     </div>

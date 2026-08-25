@@ -296,6 +296,221 @@ export const communications = pgTable("communications", {
 });
 
 // ══════════════════════════════════════════════════════════════════
+// Support tickets · student-raised queries with staff routing
+// ══════════════════════════════════════════════════════════════════
+
+export const ticketCategoryEnum = pgEnum("ticket_category", [
+  "academic",
+  "hostel",
+  "mess",
+  "medical",
+  "fees",
+  "documents",
+  "other",
+]);
+
+export const ticketStatusEnum = pgEnum("ticket_status", [
+  "open",
+  "in_progress",
+  "waiting_on_student",
+  "resolved",
+  "closed",
+]);
+
+export const ticketPriorityEnum = pgEnum("ticket_priority", [
+  "low",
+  "normal",
+  "high",
+  "urgent",
+]);
+
+export const supportTickets = pgTable("support_tickets", {
+  id: serial("id").primaryKey(),
+  leadId: integer("lead_id")
+    .notNull()
+    .references(() => leads.id, { onDelete: "cascade" }),
+  category: ticketCategoryEnum("category").notNull().default("other"),
+  subject: varchar("subject", { length: 200 }).notNull(),
+  description: text("description").notNull(),
+  status: ticketStatusEnum("status").notNull().default("open"),
+  priority: ticketPriorityEnum("priority").notNull().default("normal"),
+  assignedToId: uuid("assigned_to_id").references(() => users.id, { onDelete: "set null" }),
+  createdById: uuid("created_by_id").references(() => users.id),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  resolvedAt: timestamp("resolved_at", { withTimezone: true }),
+});
+
+export const supportTicketMessages = pgTable("support_ticket_messages", {
+  id: serial("id").primaryKey(),
+  ticketId: integer("ticket_id")
+    .notNull()
+    .references(() => supportTickets.id, { onDelete: "cascade" }),
+  senderId: uuid("sender_id").references(() => users.id),
+  senderRole: varchar("sender_role", { length: 20 }).notNull(),
+  body: text("body").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+export const supportTicketsRelations = relations(supportTickets, ({ one, many }) => ({
+  lead: one(leads, { fields: [supportTickets.leadId], references: [leads.id] }),
+  assignedTo: one(users, { fields: [supportTickets.assignedToId], references: [users.id] }),
+  createdBy: one(users, { fields: [supportTickets.createdById], references: [users.id] }),
+  messages: many(supportTicketMessages),
+}));
+
+export const supportTicketMessagesRelations = relations(supportTicketMessages, ({ one }) => ({
+  ticket: one(supportTickets, { fields: [supportTicketMessages.ticketId], references: [supportTickets.id] }),
+  sender: one(users, { fields: [supportTicketMessages.senderId], references: [users.id] }),
+}));
+
+// ══════════════════════════════════════════════════════════════════
+// Panchmukhi Shiksha · five-fold education participation tracker
+// ══════════════════════════════════════════════════════════════════
+
+export const panchmukhiDimensionEnum = pgEnum("panchmukhi_dimension", [
+  "physical",
+  "practical",
+  "aesthetic",
+  "moral",
+  "intellectual",
+]);
+
+export const panchmukhiLogs = pgTable("panchmukhi_logs", {
+  id: serial("id").primaryKey(),
+  leadId: integer("lead_id")
+    .notNull()
+    .references(() => leads.id, { onDelete: "cascade" }),
+  dimension: panchmukhiDimensionEnum("dimension").notNull(),
+  activity: varchar("activity", { length: 200 }).notNull(),
+  minutes: integer("minutes").notNull().default(30),
+  note: text("note"),
+  occurredAt: timestamp("occurred_at", { withTimezone: true }).defaultNow().notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+export const panchmukhiLogsRelations = relations(panchmukhiLogs, ({ one }) => ({
+  lead: one(leads, { fields: [panchmukhiLogs.leadId], references: [leads.id] }),
+}));
+
+// ══════════════════════════════════════════════════════════════════
+// Events & calendar
+// ══════════════════════════════════════════════════════════════════
+
+export const eventCategoryEnum = pgEnum("event_category", [
+  "academic",
+  "cultural",
+  "sports",
+  "hostel",
+  "panchmukhi",
+  "orientation",
+  "other",
+]);
+
+export const rsvpStatusEnum = pgEnum("rsvp_status", ["going", "interested", "declined"]);
+
+export const events = pgTable("events", {
+  id: serial("id").primaryKey(),
+  title: varchar("title", { length: 200 }).notNull(),
+  description: text("description"),
+  category: eventCategoryEnum("category").notNull().default("other"),
+  location: varchar("location", { length: 200 }),
+  startsAt: timestamp("starts_at", { withTimezone: true }).notNull(),
+  endsAt: timestamp("ends_at", { withTimezone: true }),
+  capacity: integer("capacity"),
+  audience: varchar("audience", { length: 100 }), // e.g. programme filter or "all"
+  createdById: uuid("created_by_id").references(() => users.id, { onDelete: "set null" }),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+export const eventRsvps = pgTable("event_rsvps", {
+  id: serial("id").primaryKey(),
+  eventId: integer("event_id")
+    .notNull()
+    .references(() => events.id, { onDelete: "cascade" }),
+  leadId: integer("lead_id")
+    .notNull()
+    .references(() => leads.id, { onDelete: "cascade" }),
+  status: rsvpStatusEnum("status").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+export const eventsRelations = relations(events, ({ many }) => ({
+  rsvps: many(eventRsvps),
+}));
+
+export const eventRsvpsRelations = relations(eventRsvps, ({ one }) => ({
+  event: one(events, { fields: [eventRsvps.eventId], references: [events.id] }),
+  lead: one(leads, { fields: [eventRsvps.leadId], references: [leads.id] }),
+}));
+
+// ══════════════════════════════════════════════════════════════════
+// Wellbeing check-ins · daily mood pulse for residential students
+// ══════════════════════════════════════════════════════════════════
+
+export const wellbeingCheckins = pgTable("wellbeing_checkins", {
+  id: serial("id").primaryKey(),
+  leadId: integer("lead_id")
+    .notNull()
+    .references(() => leads.id, { onDelete: "cascade" }),
+  moodScore: integer("mood_score").notNull(), // 1..5 (1=struggling, 5=great)
+  note: text("note"),
+  occurredAt: timestamp("occurred_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+export const wellbeingCheckinsRelations = relations(wellbeingCheckins, ({ one }) => ({
+  lead: one(leads, { fields: [wellbeingCheckins.leadId], references: [leads.id] }),
+}));
+
+// ══════════════════════════════════════════════════════════════════
+// Surveys & feedback
+// ══════════════════════════════════════════════════════════════════
+
+export const surveyCategoryEnum = pgEnum("survey_category", [
+  "faculty",
+  "mess",
+  "hostel",
+  "event",
+  "onboarding",
+  "general",
+]);
+
+export const surveys = pgTable("surveys", {
+  id: serial("id").primaryKey(),
+  title: varchar("title", { length: 200 }).notNull(),
+  description: text("description"),
+  category: surveyCategoryEnum("category").notNull().default("general"),
+  // Array of question objects: { prompt, kind: "rating" | "text", required }
+  questions: jsonb("questions").notNull(),
+  active: boolean("active").notNull().default(true),
+  audience: varchar("audience", { length: 100 }),
+  createdById: uuid("created_by_id").references(() => users.id, { onDelete: "set null" }),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+export const surveyResponses = pgTable("survey_responses", {
+  id: serial("id").primaryKey(),
+  surveyId: integer("survey_id")
+    .notNull()
+    .references(() => surveys.id, { onDelete: "cascade" }),
+  leadId: integer("lead_id")
+    .notNull()
+    .references(() => leads.id, { onDelete: "cascade" }),
+  answers: jsonb("answers").notNull(), // parallel to questions array
+  submittedAt: timestamp("submitted_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+export const surveysRelations = relations(surveys, ({ many }) => ({
+  responses: many(surveyResponses),
+}));
+
+export const surveyResponsesRelations = relations(surveyResponses, ({ one }) => ({
+  survey: one(surveys, { fields: [surveyResponses.surveyId], references: [surveys.id] }),
+  lead: one(leads, { fields: [surveyResponses.leadId], references: [leads.id] }),
+}));
+
+// ══════════════════════════════════════════════════════════════════
 // Journeys · drip automation
 // ══════════════════════════════════════════════════════════════════
 

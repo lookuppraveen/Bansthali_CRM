@@ -129,21 +129,32 @@ export function useRunJourneys() {
   });
 }
 
+export type NotificationKind =
+  | "sla"
+  | "task"
+  | "assignment"
+  | "doc_pending"
+  | "doc_rejected"
+  | "payment_received"
+  | "ticket_reply"
+  | "ticket_open";
+
 export interface NotificationsData {
   items: {
-    kind: "sla" | "task" | "assignment";
+    kind: NotificationKind;
     severity: "high" | "med" | "low";
     leadId: number | null;
     title: string;
     detail: string;
+    occurredAt: string;
   }[];
   counts: { total: number; high: number; sla: number; tasks: number };
 }
 
-export function useNotifications() {
+export function useNotifications(limit = 30) {
   return useQuery({
-    queryKey: ["notifications"],
-    queryFn: () => jsonFetch<NotificationsData>("/api/notifications"),
+    queryKey: ["notifications", limit],
+    queryFn: () => jsonFetch<NotificationsData>(`/api/notifications?limit=${limit}`),
     refetchInterval: 60_000, // poll every 60s
   });
 }
@@ -592,6 +603,278 @@ export interface StudentDoc {
   fileName: string | null;
   fileSize: number | null;
   fileMimeType: string | null;
+}
+
+export interface SurveyQuestion {
+  prompt: string;
+  kind: "rating" | "text";
+  required?: boolean;
+}
+export interface SurveyAvailable {
+  id: number;
+  title: string;
+  description: string | null;
+  category: string;
+  audience: string | null;
+  questions: SurveyQuestion[];
+}
+export interface SurveyCompleted {
+  id: number;
+  title: string;
+  category: string;
+  submittedAt: string;
+}
+
+export function useSurveys() {
+  return useQuery({
+    queryKey: ["portal", "student", "surveys"],
+    queryFn: () =>
+      jsonFetch<{ available: SurveyAvailable[]; completed: SurveyCompleted[] }>(
+        "/api/portal/student/surveys"
+      ),
+  });
+}
+
+export function useSubmitSurvey() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (v: {
+      id: number;
+      answers: { rating?: number; text?: string }[];
+    }) =>
+      jsonFetch(`/api/portal/student/surveys/${v.id}/submit`, {
+        method: "POST",
+        body: JSON.stringify({ answers: v.answers }),
+      }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["portal", "student", "surveys"] }),
+  });
+}
+
+export interface WellbeingData {
+  todaysCheckin: { id: number; moodScore: number; note: string | null; occurredAt: string } | null;
+  recent: { id: number; moodScore: number; note: string | null; occurredAt: string }[];
+  trend: { date: string; avg: number | null }[];
+  summary: { avg7: number | null; streak: number; totalEntries: number };
+}
+
+export function useWellbeing() {
+  return useQuery({
+    queryKey: ["portal", "student", "wellbeing"],
+    queryFn: () => jsonFetch<WellbeingData>("/api/portal/student/wellbeing"),
+  });
+}
+
+export function useSaveCheckin() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (v: { moodScore: number; note?: string }) =>
+      jsonFetch(`/api/portal/student/wellbeing`, { method: "POST", body: JSON.stringify(v) }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["portal", "student", "wellbeing"] }),
+  });
+}
+
+export interface StudentEvent {
+  id: number;
+  title: string;
+  description: string | null;
+  category: string;
+  location: string | null;
+  startsAt: string;
+  endsAt: string | null;
+  capacity: number | null;
+  audience: string | null;
+  myRsvp: "going" | "interested" | "declined" | null;
+  goingCount: number;
+}
+
+export function useStudentEvents() {
+  return useQuery({
+    queryKey: ["portal", "student", "events"],
+    queryFn: () => jsonFetch<{ events: StudentEvent[] }>("/api/portal/student/events"),
+  });
+}
+
+export function useEventRsvp() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (v: { eventId: number; status: "going" | "interested" | "declined" }) =>
+      jsonFetch(`/api/portal/student/events/${v.eventId}/rsvp`, {
+        method: "POST",
+        body: JSON.stringify({ status: v.status }),
+      }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["portal", "student", "events"] }),
+  });
+}
+
+export interface PanchmukhiData {
+  dimensions: {
+    key: "physical" | "practical" | "aesthetic" | "moral" | "intellectual";
+    weekMinutes: number;
+    allTimeMinutes: number;
+    target: number;
+    pct: number;
+  }[];
+  recent: {
+    id: number;
+    dimension: string;
+    activity: string;
+    minutes: number;
+    note: string | null;
+    occurredAt: string;
+  }[];
+  totals: { totalWeek: number; balanceScore: number; target: number };
+}
+
+export function usePanchmukhi() {
+  return useQuery({
+    queryKey: ["portal", "student", "panchmukhi"],
+    queryFn: () => jsonFetch<PanchmukhiData>("/api/portal/student/panchmukhi"),
+  });
+}
+
+export function useLogPanchmukhi() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (v: { dimension: string; activity: string; minutes: number; note?: string }) =>
+      jsonFetch(`/api/portal/student/panchmukhi`, {
+        method: "POST",
+        body: JSON.stringify(v),
+      }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["portal", "student", "panchmukhi"] }),
+  });
+}
+
+export interface StudentTicket {
+  id: number;
+  category: string;
+  subject: string;
+  status: string;
+  priority: string;
+  createdAt: string;
+  updatedAt: string;
+  assignedTo: { id: string; name: string; initials: string; role: string } | null;
+}
+
+export interface TicketDetail extends StudentTicket {
+  description: string;
+  lead: { id: number; name: string; program: string | null };
+  createdBy: { id: string; name: string; role: string } | null;
+  messages: {
+    id: number;
+    body: string;
+    createdAt: string;
+    senderRole: string;
+    sender: { id: string; name: string; role: string; initials: string } | null;
+  }[];
+}
+
+export function useStudentTickets() {
+  return useQuery({
+    queryKey: ["portal", "student", "tickets"],
+    queryFn: () => jsonFetch<{ tickets: StudentTicket[] }>("/api/portal/student/tickets"),
+  });
+}
+
+export function useTicket(id: number | null) {
+  return useQuery({
+    queryKey: ["ticket", id],
+    enabled: id != null,
+    queryFn: () => jsonFetch<{ ticket: TicketDetail }>(`/api/tickets/${id}`),
+  });
+}
+
+export function useCreateTicket() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (v: {
+      category: "academic" | "hostel" | "mess" | "medical" | "fees" | "documents" | "other";
+      subject: string;
+      description: string;
+      priority?: "low" | "normal" | "high" | "urgent";
+    }) =>
+      jsonFetch<{ ticket: { id: number } }>(`/api/portal/student/tickets`, {
+        method: "POST",
+        body: JSON.stringify(v),
+      }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["portal", "student", "tickets"] }),
+  });
+}
+
+export function useReplyTicket() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (v: { ticketId: number; body: string }) =>
+      jsonFetch(`/api/tickets/${v.ticketId}/messages`, {
+        method: "POST",
+        body: JSON.stringify({ body: v.body }),
+      }),
+    onSuccess: (_d, v) => {
+      qc.invalidateQueries({ queryKey: ["ticket", v.ticketId] });
+      qc.invalidateQueries({ queryKey: ["portal", "student", "tickets"] });
+    },
+  });
+}
+
+export function useUpdateTicket() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (v: {
+      id: number;
+      status?: string;
+      priority?: string;
+      assignedToId?: string | null;
+    }) => {
+      const { id, ...rest } = v;
+      return jsonFetch(`/api/tickets/${id}`, { method: "PATCH", body: JSON.stringify(rest) });
+    },
+    onSuccess: (_d, v) => {
+      qc.invalidateQueries({ queryKey: ["ticket", v.id] });
+      qc.invalidateQueries({ queryKey: ["portal", "student", "tickets"] });
+    },
+  });
+}
+
+export interface StudentPaymentsData {
+  totals: { paidPaise: number; upcomingPaise: number; currency: string };
+  upcoming: {
+    key: string;
+    purpose: string;
+    label: string;
+    amount: number;
+    amountPaise: number;
+    dueOn: string;
+    alreadyRequested: boolean;
+  }[];
+  history: {
+    id: number;
+    purpose: string;
+    amount: number;
+    currency: string;
+    status: string;
+    description: string | null;
+    shortUrl: string | null;
+    createdAt: string;
+    paidAt: string | null;
+  }[];
+}
+
+export function useStudentPayments() {
+  return useQuery({
+    queryKey: ["portal", "student", "payments"],
+    queryFn: () => jsonFetch<StudentPaymentsData>("/api/portal/student/payments"),
+  });
+}
+
+export function useStudentCreatePayment() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (v: { purpose: string; amountRupees: number; description?: string }) =>
+      jsonFetch<{ payment: { id: number }; shortUrl: string }>(`/api/portal/student/payments`, {
+        method: "POST",
+        body: JSON.stringify(v),
+      }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["portal", "student", "payments"] }),
+  });
 }
 
 export function useStudentPortal() {

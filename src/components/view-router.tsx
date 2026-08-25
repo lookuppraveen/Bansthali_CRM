@@ -17,6 +17,7 @@ import { TemplatesView } from "@/views/templates";
 import { PipelinesView } from "@/views/pipelines";
 import { KbView } from "@/views/kb";
 import { JourneysView } from "@/views/journeys";
+import { NotificationsView } from "@/views/notifications";
 
 export function ViewRouter() {
   const { view } = useView();
@@ -54,6 +55,8 @@ export function ViewRouter() {
       return <KbView />;
     case "journeys":
       return <JourneysView />;
+    case "notifications":
+      return <NotificationsView />;
     default:
       return null;
   }

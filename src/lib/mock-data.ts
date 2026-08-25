@@ -449,6 +449,7 @@ export const CRUMBS: Record<string, [string, string]> = {
   pipelines: ["System", "Pipelines"],
   kb: ["System", "Knowledge Base"],
   journeys: ["System", "Journeys"],
+  notifications: ["System", "Notifications"],
 };
 
 export type ViewKey =
@@ -467,4 +468,5 @@ export type ViewKey =
   | "templates"
   | "pipelines"
   | "kb"
-  | "journeys";
+  | "journeys"
+  | "notifications";
